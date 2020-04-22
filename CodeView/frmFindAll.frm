@@ -491,7 +491,7 @@ End Sub
 Private Sub Form_Resize()
     On Error Resume Next
     lv.Width = Me.Width - lv.Left - 200
-    'lv.ColumnHeaders(3).Width = lv.Width - lv.ColumnHeaders(3).Left - 200
+    lv.ColumnHeaders(3).Width = lv.Width - lv.ColumnHeaders(3).Left - 200
     'lvMod.ColumnHeaders(2).Width = lvMod.Width - lvMod.ColumnHeaders(2).Left - 200
     lv.Height = Me.Height - lv.Top - 200
     lvMod.Height = lv.Height - 100

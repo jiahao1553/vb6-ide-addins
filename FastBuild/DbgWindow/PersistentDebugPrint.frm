@@ -39,6 +39,9 @@ Begin VB.Form frmDebugPrint
    End
    Begin VB.Menu mnuSettings 
       Caption         =   "Settings"
+      Begin VB.Menu mnuTopMost 
+         Caption         =   "TopMost"
+      End
       Begin VB.Menu mnuFont 
          Caption         =   "Font"
          Visible         =   0   'False
@@ -49,12 +52,12 @@ Begin VB.Form frmDebugPrint
       Begin VB.Menu mnuForeColor 
          Caption         =   "ForeColor"
       End
-      Begin VB.Menu mnuTopMost 
-         Caption         =   "TopMost"
+      Begin VB.Menu mnuSpacer 
+         Caption         =   "-"
       End
-   End
-   Begin VB.Menu mnuReset 
-      Caption         =   "Reset"
+      Begin VB.Menu mnuReset 
+         Caption         =   "Reset"
+      End
    End
    Begin VB.Menu mnuAbout 
       Caption         =   "About"
@@ -225,8 +228,8 @@ Private Sub mnuReset_Click()
         txt.FontStrikethru = False
         txt.FontUnderline = False
         '
-        txt.BackColor = vbBlack
-        txt.ForeColor = vbYellow
+        txt.BackColor = vbWhite
+        txt.ForeColor = vbBlack
 End Sub
 
 Public Sub Out(s As String, Optional bHoldLine As Boolean)
