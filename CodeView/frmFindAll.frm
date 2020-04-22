@@ -11,11 +11,20 @@ Begin VB.Form frmFindAll
    ScaleHeight     =   3765
    ScaleWidth      =   11190
    StartUpPosition =   2  'CenterScreen
+   Begin CodeView.ucFilterList lvMod 
+      Height          =   3120
+      Left            =   90
+      TabIndex        =   7
+      Top             =   450
+      Width           =   3210
+      _ExtentX        =   5662
+      _ExtentY        =   5503
+   End
    Begin VB.TextBox txtIPC 
       BackColor       =   &H0000FFFF&
       Height          =   285
       Left            =   4005
-      TabIndex        =   7
+      TabIndex        =   6
       Text            =   "txtIPC"
       Top             =   630
       Visible         =   0   'False
@@ -24,7 +33,7 @@ Begin VB.Form frmFindAll
    Begin CodeView.HistoryCombo txtFind 
       Height          =   315
       Left            =   1125
-      TabIndex        =   6
+      TabIndex        =   5
       Top             =   75
       Width           =   5865
       _ExtentX        =   10345
@@ -34,7 +43,7 @@ Begin VB.Form frmFindAll
       Caption         =   "Match Case"
       Height          =   330
       Left            =   9855
-      TabIndex        =   5
+      TabIndex        =   4
       Top             =   90
       Width           =   1275
    End
@@ -42,49 +51,9 @@ Begin VB.Form frmFindAll
       Caption         =   "Whole Word"
       Height          =   285
       Left            =   8505
-      TabIndex        =   4
+      TabIndex        =   3
       Top             =   90
       Width           =   1230
-   End
-   Begin MSComctlLib.ListView lvMod 
-      Height          =   3210
-      Left            =   45
-      TabIndex        =   3
-      Top             =   450
-      Width           =   3210
-      _ExtentX        =   5662
-      _ExtentY        =   5662
-      View            =   3
-      LabelEdit       =   1
-      SortOrder       =   -1  'True
-      Sorted          =   -1  'True
-      LabelWrap       =   0   'False
-      HideSelection   =   0   'False
-      FullRowSelect   =   -1  'True
-      _Version        =   393217
-      ForeColor       =   -2147483640
-      BackColor       =   -2147483643
-      BorderStyle     =   1
-      Appearance      =   1
-      BeginProperty Font {0BE35203-8F91-11CE-9DE3-00AA004BB851} 
-         Name            =   "Courier"
-         Size            =   9.75
-         Charset         =   0
-         Weight          =   400
-         Underline       =   0   'False
-         Italic          =   0   'False
-         Strikethrough   =   0   'False
-      EndProperty
-      NumItems        =   2
-      BeginProperty ColumnHeader(1) {BDD1F052-858B-11D1-B16A-00C0F0283628} 
-         Text            =   "Hits"
-         Object.Width           =   1235
-      EndProperty
-      BeginProperty ColumnHeader(2) {BDD1F052-858B-11D1-B16A-00C0F0283628} 
-         SubItemIndex    =   1
-         Text            =   "Name"
-         Object.Width           =   2540
-      EndProperty
    End
    Begin VB.CommandButton cmdSearch 
       Caption         =   "Search"
@@ -187,7 +156,7 @@ Attribute VB_Exposed = False
 
 
 Private bCancel As Boolean
-Private Declare Sub SetWindowPos Lib "user32" (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long)
+Private Declare Sub SetWindowPos Lib "user32" (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long)
 Private Const HWND_TOPMOST = -1
 
 Private historyFile As String
@@ -219,7 +188,7 @@ End Function
 
 Public Function GetActiveModuleName() As String
   On Error Resume Next
-  GetActiveModuleName = GetActiveCodePane.CodeModule.name
+  GetActiveModuleName = GetActiveCodePane.CodeModule.Name
   On Error GoTo 0
 End Function
 
@@ -407,13 +376,13 @@ Public Sub DoSearch(lv As ListView, strfind As String, Optional wholeWord As Boo
           For Each comp In proj.VBComponents
                 
                 Set parent = New CModule
-                parent.module = comp.name & ModuleExt(comp.Type)
-                parent.proj = proj.name
+                parent.module = comp.Name & ModuleExt(comp.Type)
+                parent.proj = proj.Name
                 
                 modules = modules + 1
-                Me.Caption = "Searching Component " & comp.name
+                Me.Caption = "Searching Component " & comp.Name
                 
-                If LenB(comp.name) > 0 Then
+                If LenB(comp.Name) > 0 Then
                 
                     Set CompMod = comp.CodeModule
     
@@ -433,7 +402,7 @@ Public Sub DoSearch(lv As ListView, strfind As String, Optional wholeWord As Boo
                             result.proc = GetProcName(CompMod, StartLine)
                             result.lineNo = StartLine
                             result.Text = Trim$(code)
-                            result.ComponentName = comp.name
+                            result.ComponentName = comp.Name
                             parent.hits.Add result
                             hits = hits + 1
                             code = Empty
@@ -454,7 +423,7 @@ Public Sub DoSearch(lv As ListView, strfind As String, Optional wholeWord As Boo
               
               If parent.hits.Count > 0 Then
                     Set li = lvMod.ListItems.Add(, , IIf(parent.hits.Count < 10, " ", "") & parent.hits.Count)
-                    li.SubItems(1) = parent.module 'if proj.count > 1 then prepend proj name..
+                    li.subItems(1) = parent.module 'if proj.count > 1 then prepend proj name..
                     Set li.Tag = parent
               End If
               
@@ -512,6 +481,8 @@ Private Sub Form_Load()
     FormPos Me, True
     SetWindowTopMost Me
     historyFile = g_VBInstance.ActiveVBProject.filename & ".search.txt"
+    lvMod.SetColumnHeaders "Hits,Name*", "700," & lvMod.Width - 700
+    lvMod.SetFont "Courier", 10
     txtFind.LoadHistory historyFile
     SaveSetting "codeview", "ipc", "txtIPC", txtIPC.hwnd 'so we can trigger searches from remote tools like a list of things..
     'MsgBox "form search all load ok"
@@ -520,10 +491,10 @@ End Sub
 Private Sub Form_Resize()
     On Error Resume Next
     lv.Width = Me.Width - lv.Left - 200
-    lv.ColumnHeaders(3).Width = lv.Width - lv.ColumnHeaders(3).Left - 200
-    lvMod.ColumnHeaders(2).Width = lvMod.Width - lvMod.ColumnHeaders(2).Left - 200
+    'lv.ColumnHeaders(3).Width = lv.Width - lv.ColumnHeaders(3).Left - 200
+    'lvMod.ColumnHeaders(2).Width = lvMod.Width - lvMod.ColumnHeaders(2).Left - 200
     lv.Height = Me.Height - lv.Top - 200
-    lvMod.Height = lv.Height
+    lvMod.Height = lv.Height - 100
 End Sub
 
 Private Sub Form_Unload(Cancel As Integer)
@@ -534,12 +505,16 @@ End Sub
 
  
 
-Private Sub Label1_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+Private Sub Label1_MouseUp(Button As Integer, Shift As Integer, x As Single, y As Single)
     If Button = 2 Then
         MsgBox "Supported commands /clear to clear history, click once to empty textbox", vbInformation
     Else
         txtFind.Text = Empty
     End If
+End Sub
+
+Private Sub lv_ColumnClick(ByVal ColumnHeader As MSComctlLib.ColumnHeader)
+    lvColumnSort lv, ColumnHeader
 End Sub
 
 Private Sub lv_ItemClick(ByVal Item As MSComctlLib.ListItem)
@@ -554,7 +529,7 @@ Private Sub lv_ItemClick(ByVal Item As MSComctlLib.ListItem)
 
 2    For Each proj In g_VBInstance.VBProjects
 3        For Each comp In proj.VBComponents
-4            If comp.name = r.ComponentName Then
+4            If comp.Name = r.ComponentName Then
 5                comp.CodeModule.CodePane.Show
 6                comp.CodeModule.CodePane.TopLine = r.lineNo
 '7                comp.CodeModule.CodePane.SetSelection r.lineNo, InStr(1, r.text, txtFind, vbTextCompare), r.lineNo, Len(txtFind)
@@ -569,8 +544,12 @@ hell:
     
 End Sub
 
-Private Sub lv_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+Private Sub lv_MouseUp(Button As Integer, Shift As Integer, x As Single, y As Single)
     If Button = 2 Then PopupMenu mnuPopup
+End Sub
+
+Private Sub lvMod_ColumnClick(ByVal ColumnHeader As MSComctlLib.ColumnHeader)
+    lvColumnSort lvMod, ColumnHeader
 End Sub
 
 Private Sub lvMod_ItemClick(ByVal Item As MSComctlLib.ListItem)
@@ -585,21 +564,21 @@ Private Sub lvMod_ItemClick(ByVal Item As MSComctlLib.ListItem)
     
     For Each r In p.hits
         Set li = lv.ListItems.Add(, , r.lineNo)
-        li.SubItems(1) = r.proc
-        li.SubItems(2) = r.Text
+        li.subItems(1) = r.proc
+        li.subItems(2) = r.Text
         Set li.Tag = r
     Next
     
 End Sub
 
 Private Sub mnuCopyAll_Click()
-    Dim X() As String
+    Dim x() As String
     Dim li As ListItem
     For Each li In lv.ListItems
-        push X, Join(Array(li.Text, li.SubItems(1), li.SubItems(2)), vbTab)
+        push x, Join(Array(li.Text, li.subItems(1), li.subItems(2)), vbTab)
     Next
     Clipboard.Clear
-    Clipboard.SetText Join(X, vbCrLf)
+    Clipboard.SetText Join(x, vbCrLf)
 End Sub
 
 Private Sub mnuSearchList_Click()
@@ -635,10 +614,10 @@ Sub FormPos(fform As Form, Optional andSize As Boolean = False, Optional save_mo
     For i = 1 To sz
         If save_mode Then
             ff = CallByName(fform, f(i), VbGet)
-            SaveSetting App.EXEName, fform.name & ".FormPos", f(i), ff
+            SaveSetting App.EXEName, fform.Name & ".FormPos", f(i), ff
         Else
             def = CallByName(fform, f(i), VbGet)
-            ff = GetSetting(App.EXEName, fform.name & ".FormPos", f(i), def)
+            ff = GetSetting(App.EXEName, fform.Name & ".FormPos", f(i), def)
             CallByName fform, f(i), VbLet, ff
         End If
     Next

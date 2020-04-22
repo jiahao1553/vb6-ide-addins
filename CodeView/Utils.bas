@@ -17,6 +17,25 @@ Dim RW() As String
 Dim Special() As String
 
 
+Public Sub lvColumnSort(ListViewControl As Object, Column As Object)
+    On Error Resume Next
+    Const lvwAscending As Long = 0
+    Const lvwDescending As Long = 1
+     
+    With ListViewControl
+       If .SortKey <> Column.Index - 1 Then
+             .SortKey = Column.Index - 1
+             .SortOrder = lvwAscending
+       Else
+             If .SortOrder = lvwAscending Then
+              .SortOrder = lvwDescending
+             Else
+              .SortOrder = lvwAscending
+             End If
+       End If
+       .Sorted = -1
+    End With
+End Sub
 
 Sub push(ary, value) 'this modifies parent ary object
     On Error GoTo init

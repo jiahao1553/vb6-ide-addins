@@ -12,6 +12,14 @@ Begin VB.Form frmLazy
    ScaleHeight     =   5820
    ScaleWidth      =   10245
    StartUpPosition =   2  'CenterScreen
+   Begin VB.CommandButton cmdSplitBlob 
+      Caption         =   "Split Blob"
+      Height          =   330
+      Left            =   1755
+      TabIndex        =   13
+      Top             =   5400
+      Width           =   915
+   End
    Begin VB.CommandButton cmdLockEnumCase 
       Caption         =   "Lock Enum Case"
       Height          =   315
@@ -371,6 +379,37 @@ Public Function LockEnumCase(enumText As String, Optional ByVal LineLen As Integ
 End Function
 
 
+
+Private Sub cmdSplitBlob_Click()
+    
+    Dim s As String, tmp() As String, a() As String, x, j
+    Dim maxLen As Long
+    
+    On Error Resume Next
+    maxLen = CLng(InputBox("Enter max line length: ", , 50))
+    If maxLen = 0 Then Exit Sub
+    
+    a = Split(Text2.Text, vbCrLf)
+    For Each x In a
+        If Len(x) > maxLen Then
+            j = x
+            Do While Len(j) > maxLen
+                push tmp, "x = x & """ & Mid(j, 1, maxLen) & """"
+                j = Mid(j, maxLen + 1)
+            Loop
+            If Len(j) > 0 Then
+                'push tmp, j & """ & vbcrlf & """
+                push tmp, "x = x & """ & j & """"
+            End If
+        Else
+            push tmp, "x = vbcrlf & x & """ & x & """ & vbcrlf "
+        End If
+    Next
+    
+    'Text2 = """" & Join(tmp, """ & _ " & vbCrLf & """") & """"
+    Text2 = Join(tmp, vbCrLf)
+    
+End Sub
 
 Private Sub Command1_Click()
     Dim s As String, i, l
