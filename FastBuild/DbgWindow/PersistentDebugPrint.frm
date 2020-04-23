@@ -1,4 +1,5 @@
 VERSION 5.00
+Object = "{F9043C88-F6F2-101A-A3C9-08002B2F49FB}#1.2#0"; "COMDLG32.OCX"
 Begin VB.Form frmDebugPrint 
    Caption         =   "Persistent Debug Print Window"
    ClientHeight    =   4725
@@ -19,6 +20,13 @@ Begin VB.Form frmDebugPrint
    LinkTopic       =   "Form1"
    ScaleHeight     =   4725
    ScaleWidth      =   7635
+   Begin MSComDlg.CommonDialog cdl 
+      Left            =   3555
+      Top             =   2115
+      _ExtentX        =   847
+      _ExtentY        =   847
+      _Version        =   393216
+   End
    Begin VB.TextBox txt 
       BackColor       =   &H00FFFFFF&
       BorderStyle     =   0  'None
@@ -42,15 +50,17 @@ Begin VB.Form frmDebugPrint
       Begin VB.Menu mnuTopMost 
          Caption         =   "TopMost"
       End
-      Begin VB.Menu mnuFont 
-         Caption         =   "Font"
-         Visible         =   0   'False
+      Begin VB.Menu mnuTimeStamp 
+         Caption         =   "Timestamp"
       End
       Begin VB.Menu mnuBackColor 
          Caption         =   "BackColor"
       End
       Begin VB.Menu mnuForeColor 
          Caption         =   "ForeColor"
+      End
+      Begin VB.Menu mnuFont 
+         Caption         =   "Font"
       End
       Begin VB.Menu mnuSpacer 
          Caption         =   "-"
@@ -61,6 +71,9 @@ Begin VB.Form frmDebugPrint
    End
    Begin VB.Menu mnuAbout 
       Caption         =   "About"
+      Begin VB.Menu mnuOpenHomePage 
+         Caption         =   "Homepage"
+      End
    End
 End
 Attribute VB_Name = "frmDebugPrint"
@@ -140,6 +153,7 @@ Private Sub Form_Load()
         '
         txt.BackColor = GetSetting(App.Title, "Settings", "BackColor", vbWhite)
         txt.ForeColor = GetSetting(App.Title, "Settings", "ForeCOlor", vbBlack)
+        mnuTimeStamp.Checked = GetSetting(App.Title, "Settings", "TimeStamp", 0)
     On Error GoTo 0
     '
     SubclassFormToReceiveStringMsg Me
@@ -160,6 +174,7 @@ Private Sub Form_Unload(Cancel As Integer)
     '
     SaveSetting App.Title, "Settings", "BackColor", txt.BackColor
     SaveSetting App.Title, "Settings", "ForeCOlor", txt.ForeColor
+    SaveSetting App.Title, "Settings", "TimeStamp", IIf(mnuTimeStamp.Checked, 1, 0)
     SaveSetting "dbgWindow", "settings", "topMost", IIf(mnuTopMost.Checked, 1, 0)
 End Sub
 
@@ -169,41 +184,39 @@ Private Sub Form_Resize()
     End If
 End Sub
 
-Private Sub mnuAbout_Click()
+Private Sub mnuClear_Click()
+    txt.Text = vbNullString
+End Sub
+
+Private Sub mnuOpenHomePage_Click()
     On Error Resume Next
     Const url = "http://www.vbforums.com/showthread.php?874127-Persistent-Debug-Print-Window"
     ShellExecuteA Me.hWnd, "open", url, "", "", 4
 End Sub
 
-Private Sub mnuClear_Click()
-    txt.Text = vbNullString
-End Sub
-
 Private Sub mnuSeparate_Click()
-    Out vbCrLf
-    Out "-----------------------"
-    Out vbCrLf
+     Out "<div>"
 End Sub
 
-'Private Sub mnuFont_Click()
-'    cdl.Flags = cdlCFScreenFonts Or cdlCFForceFontExist
-'    '
-'    cdl.FontName = txt.FontName
-'    cdl.FontBold = txt.FontBold
-'    cdl.FontItalic = txt.FontItalic
-'    cdl.FontSize = txt.FontSize
-'    cdl.FontStrikethru = txt.FontStrikethru
-'    cdl.FontUnderline = txt.FontUnderline
-'    '
-'    cdl.ShowFont
-'    '
-'    txt.FontName = cdl.FontName
-'    txt.FontBold = cdl.FontBold
-'    txt.FontItalic = cdl.FontItalic
-'    txt.FontSize = cdl.FontSize
-'    txt.FontStrikethru = cdl.FontStrikethru
-'    txt.FontUnderline = cdl.FontUnderline
-'End Sub
+Private Sub mnuFont_Click()
+    cdl.Flags = cdlCFScreenFonts Or cdlCFForceFontExist
+    '
+    cdl.FontName = txt.FontName
+    cdl.FontBold = txt.FontBold
+    cdl.FontItalic = txt.FontItalic
+    cdl.FontSize = txt.FontSize
+    cdl.FontStrikethru = txt.FontStrikethru
+    cdl.FontUnderline = txt.FontUnderline
+    '
+    cdl.ShowFont
+    '
+    txt.FontName = cdl.FontName
+    txt.FontBold = cdl.FontBold
+    txt.FontItalic = cdl.FontItalic
+    txt.FontSize = cdl.FontSize
+    txt.FontStrikethru = cdl.FontStrikethru
+    txt.FontUnderline = cdl.FontUnderline
+End Sub
 
 Private Sub mnuBackColor_Click()
     ShowColorDialog Me.hWnd, txt.BackColor, , "BackColor"
@@ -230,12 +243,28 @@ Private Sub mnuReset_Click()
         '
         txt.BackColor = vbWhite
         txt.ForeColor = vbBlack
+        mnuTimeStamp.Checked = False
+        mnuTopMost.Checked = False
+        SetWindowTopMost Me, False
 End Sub
 
 Public Sub Out(s As String, Optional bHoldLine As Boolean)
+
+    Dim supressTimestamp As Boolean
+    
+    If s = "<div>" Then
+        s = vbCrLf & String(50, "-") & vbCrLf
+        supressTimestamp = True
+    End If
+    
     If s = "<cls>" Then
            txt.Text = Empty
     Else
+    
+        If mnuTimeStamp.Checked And Not supressTimestamp Then
+            s = Format(Now, "hh:nn:ss> ") & s
+        End If
+
         SendMessageW txt.hWnd, EM_SETSEL, &H7FFFFFFF, ByVal &H7FFFFFFF          ' txt.SelStart = &H7FFFFFFF
         If bHoldLine Then
             SendMessageW txt.hWnd, EM_REPLACESEL, 0, ByVal StrPtr(s)            ' txt.SelText = s
@@ -243,6 +272,7 @@ Public Sub Out(s As String, Optional bHoldLine As Boolean)
             SendMessageW txt.hWnd, EM_REPLACESEL, 0, ByVal StrPtr(s & vbCrLf)   ' txt.SelText = s & vbCrLf
         End If
     End If
+    
 End Sub
 
 Private Function FormIsFullyOnMonitor(frm As Form) As Boolean
@@ -267,6 +297,10 @@ Public Function hMonitorForForm(frm As Form) As Long
     Const MONITOR_DEFAULTTONULL = &H0
     hMonitorForForm = MonitorFromWindow(frm.hWnd, MONITOR_DEFAULTTONULL)
 End Function
+
+Private Sub mnuTimeStamp_Click()
+    mnuTimeStamp.Checked = Not mnuTimeStamp.Checked
+End Sub
 
 Private Sub mnuTopMost_Click()
     mnuTopMost.Checked = Not mnuTopMost.Checked
