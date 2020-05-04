@@ -167,7 +167,6 @@ Public Sub LaunchAndDoSearch(txt As String)
         cmdSearch_Click
 End Sub
 
-
 Sub SetWindowTopMost(f As Form)
    SetWindowPos f.hwnd, HWND_TOPMOST, f.Left / 15, _
         f.Top / 15, f.Width / 15, _
@@ -483,6 +482,7 @@ Private Sub Form_Load()
     historyFile = g_VBInstance.ActiveVBProject.filename & ".search.txt"
     lvMod.SetColumnHeaders "Hits,Name*", "700," & lvMod.Width - 700
     lvMod.SetFont "Courier", 10
+    txtFind.SetFont
     txtFind.LoadHistory historyFile
     SaveSetting "codeview", "ipc", "txtIPC", txtIPC.hwnd 'so we can trigger searches from remote tools like a list of things..
     'MsgBox "form search all load ok"
@@ -506,10 +506,11 @@ End Sub
  
 
 Private Sub Label1_MouseUp(Button As Integer, Shift As Integer, x As Single, y As Single)
+    On Error Resume Next
     If Button = 2 Then
-        MsgBox "Supported commands /clear to clear history, click once to empty textbox", vbInformation
+        MsgBox "Supported commands /clear to clear history, click once to paste into textbox", vbInformation
     Else
-        txtFind.Text = Empty
+        txtFind.Text = Clipboard.GetText
     End If
 End Sub
 

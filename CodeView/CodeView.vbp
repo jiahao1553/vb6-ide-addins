@@ -50,4 +50,4 @@ DebugStartupOption=0
 AutoRefresh=1
 
 [fastBuild]
-fullPath=D:\_code\vb6_addins\CodeView\CodeView.dll
+fullPath=%ap%\CodeView.dll

@@ -29,6 +29,12 @@ Attribute Text.VB_UserMemId = 0
     Text = cbo.Text
 End Property
 
+Sub SetFont(Optional fontName As String = "Courier", Optional size As Long = 12)
+    On Error Resume Next
+    cbo.Font.Name = fontName
+    cbo.Font.size = size
+End Sub
+
 Property Let Text(ByVal v As String)
     cbo.Text = v
 End Property
