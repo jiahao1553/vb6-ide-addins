@@ -6,7 +6,7 @@ Module=vbcTools; vbcTools.bas
 Form=vbcLinkInfo.frm
 Form=frmDebug.frm
 RelatedDoc=link.vbc
-Object={3B7C8863-D78F-101B-B9B5-04021C009402}#1.2#0; RICHTX32.OCX
+Object={3B7C8863-D78F-101B-B9B5-04021C009402}#1.2#0; richtx32.ocx
 Startup="Sub Main"
 HelpFile=""
 NoControlUpgrade=1
@@ -42,4 +42,4 @@ MaxNumberOfThreads=1
 AutoRefresh=1
 
 [fastBuild]
-fullPath=D:\_code\vb6_addins\LinkTool\LinkTool\Link.exe
+fullPath=%ap%\Link.exe

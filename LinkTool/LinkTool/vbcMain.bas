@@ -34,18 +34,15 @@ Option Compare Text
 '      2. Put a copy this MVBLC version of Link.exe into the same
 '         folder
 '
-'  MVBLC will only intervene in the normal linkage procedure if we
-'  are making a DLL, and there is a VBC file (a link control command
-'  file) present in the same directory as the DLL, and  with the same
-'  name as the DLL.  In all other cases MVBLC operates transparently,
+'  MVBLC will only intervene in the normal linkage procedure if there
+'  is a VBC file (a link control command file) present in the same directory
+'  and  with the same name.  In all other cases MVBLC operates transparently,
 '  it just passes the VB6-specified link command over to the real
 '  linker.
 '
 '  A link control file is simply a text file named [exe_name].vbc
 '
-'  MVBLC supports the following link control commands:
-'
-'      EXPORT, _Export, ENTRY, TIDY, STATUS, PostBuild, Debug, AddObj, replace
+'  See link control commands below
 '
 '  PostBuild and AddObj support basic envirnoment variables:
 '        %1                 full path and file name of target output file
@@ -102,6 +99,10 @@ Option Compare Text
 '       you cna replace just that function, by adding a new C obj file that contains
 '       its replacement. Crudely implemented, but works.
 '
+'    SAVE <FILE.OBJ> <SAVED_AS.OBJ>
+'
+'       dont let the linker delete the target file save it for latter
+'
 '  ----------------------
 '  MISCELLANEOUS COMMANDS
 '  ----------------------
@@ -148,6 +149,8 @@ Const logfile = "c:\vbLink.log"
 Public EXEFILE  As String  ' full pathname of exe/dll file being
 Public EXENAME  As String  ' name of exe/dll being built (no ext)
 Public OUTNAME  As String  ' full name of output file
+Public PARENTDIR As String
+
 Public cmdFile     As String  ' path to the current VBC file
 Public defFile  As String     'path to def file generated..
 
@@ -240,7 +243,7 @@ Sub Main()
         If Len(vbCommand) = 0 Then End
    End If
 
-   If NormalLink Then
+   If NormalLink Then 'set in ProcessVBC
       Execute "VBLINK " & vbCommand, 1
       If Len(PostBuild) > 0 Then
         'MsgBox PostBuild
@@ -286,6 +289,7 @@ Private Function LoadCmdFile() As String
    EXEPATH = Left$(EXEFILE, j - 1)
    OUTNAME = Mid$(EXEFILE, j + 1)
    EXENAME = Left$(OUTNAME, Len(OUTNAME) - 4)
+   PARENTDIR = Mid(EXEFILE, 1, j)
    
    'look for the link control file in the EXEPATH folder then in the project foilder
    xFile = EXEPATH & "\" & EXENAME & ".vbc"
@@ -342,10 +346,11 @@ Private Sub ProcessVBC(cmdFile As String)
    Dim dName   As String       ' temp variable for decorated proc name
    Dim EntryFlag As Boolean    ' true if we find an ENTRY command
    Dim j As Long, k As Long
-
+   Dim pth As String, p2 As String, f2 As Long
+   
    If Not FileExists(cmdFile) Then Exit Sub
    
-   f = FreeFile
+   f = FreeFile 'global int
    Open cmdFile For Input As #f
    
    Do Until EOF(f)                        ' ".vbc" Export Control File
@@ -448,6 +453,22 @@ Private Sub ProcessVBC(cmdFile As String)
                                End If
                                xList = xList & "," & pName(1) & " = " & dName
                             End If
+                            
+         Case "save"       'save <module.obj> <savedAs.obj>
+                            If UBound(pName) = 2 Then
+                                mName = pName(1)            ' module name
+                                pth = PARENTDIR & mName
+                                p2 = PARENTDIR & pName(2)
+                                If FileExists(p2) Then Kill p2
+                                'MsgBox pth
+                                If FileExists(pth) Then
+                                    'f2 = FreeFile
+                                    'Open pth For Binary Access Read Lock Write As #f2 'locking doesnt work..
+                                    FileCopy pth, p2
+                                    'MsgBox "LOCKED"
+                                End If
+                            End If
+       
          End Select
          
 NextLine:
