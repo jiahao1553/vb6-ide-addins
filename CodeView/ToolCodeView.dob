@@ -226,9 +226,10 @@ Private filterChanged As Boolean
 Private PrevMemberCount As Long
 'Private Line As Long
 'Private LineCount As Long
-Private Nodes(5) As Node
+Private Nodes(6) As Node
 Private initilized As Boolean
 Private curEntry As CEntry
+Private Const vbext_mt_API As Long = 6
 
 Const DEBUGMODE = False
 
@@ -286,7 +287,7 @@ Private Sub CodeView_KeyDown(KeyCode As Integer, Shift As Integer)
     End If
 End Sub
 
-Private Sub CodeView_Mouseup(Button As Integer, Shift As Integer, x As Single, Y As Single)
+Private Sub CodeView_Mouseup(Button As Integer, Shift As Integer, x As Single, y As Single)
     On Error Resume Next
     'If Not CodeView.SelectedItem Is Nothing Then
     '    mnuCopyPublic.Visible = (CodeView.SelectedItem.Text = "Functions")
@@ -338,6 +339,8 @@ Sub InitCodeView()
     n.Bold = True
     n.Expanded = True
     
+    'node index aligns to the MemberType enum
+    Set Nodes(vbext_mt_API) = CodeView.Nodes.Add("cv", tvwChild, , "API", vbext_mt_Method) 'we made this one up we switch it if lines of code = 1
     Set Nodes(vbext_mt_Const) = CodeView.Nodes.Add("cv", tvwChild, , "Constants", vbext_mt_Const)
     Set Nodes(vbext_mt_Variable) = CodeView.Nodes.Add("cv", tvwChild, , "Variables", vbext_mt_Variable)
     Set Nodes(vbext_mt_Property) = CodeView.Nodes.Add("cv", tvwChild, , "Properties", vbext_mt_Property)
@@ -362,6 +365,7 @@ Sub ClearCodeView()
     ClearChildNodes CodeView, vbNullString, Nodes(vbext_mt_Event)
     ClearChildNodes CodeView, vbNullString, Nodes(vbext_mt_Property)
     ClearChildNodes CodeView, vbNullString, Nodes(vbext_mt_Method)
+    ClearChildNodes CodeView, vbNullString, Nodes(vbext_mt_API)
     Unfreeze CodeView.hwnd
 End Sub
 
@@ -382,7 +386,7 @@ End Sub
 '
 'End Function
 
-Private Function getVarDefLine(name, start) As Long
+Private Function getVarDefLine(Name, start) As Long
     
     'for variables the vb plugin api does not return the proper line number always :(
     'todo: could be more precise..
@@ -390,7 +394,7 @@ Private Function getVarDefLine(name, start) As Long
     
     For i = 0 To 125
         x = ActiveCodeModule.Lines(start + i, 1)
-        If InStr(x, name) > 0 Then
+        If InStr(x, Name) > 0 Then
             getVarDefLine = start + i
             Exit For
         End If
@@ -414,7 +418,7 @@ Sub Reload(Optional NewModule As CodeModule)
             
     If Not initilized Then InitCodeView
     
-    curProj = g_VBInstance.ActiveVBProject.name
+    curProj = g_VBInstance.ActiveVBProject.Name
     If curProj <> ProjectName Then
         If Len(ProjectName) > 0 Then 'project name has changed..
             SaveMySetting ProjectName, Trim(txtFilter.Text)
@@ -444,7 +448,7 @@ Sub Reload(Optional NewModule As CodeModule)
         Exit Sub
     End If
     
-    DBG "Loading: " & ActiveCodeModule.parent.name
+    DBG "Loading: " & ActiveCodeModule.parent.Name
     
     If ActiveCodeModule.Members.Count = 0 Then
         DBG "Members.count = 0"
@@ -467,9 +471,11 @@ Sub Reload(Optional NewModule As CodeModule)
         End If
         
         e.mType = mber.Type
-        e.loc = mber.CodeLocation
+        e.loc = mber.CodeLocation 'if 1 then its a declaration of an api or event..
+        '                         todo: we should scan file and fix it manually somehow for better navigation (but not till we switch node below)
+        '                               also move declared events to their own node?
         
-        If InStr(mber.name, "_Click") > 0 Or InStr(mber.name, "_Mouse") > 0 Or (mber.name Like "*_*Click") Then
+        If InStr(mber.Name, "_Click") > 0 Or InStr(mber.Name, "_Mouse") > 0 Or (mber.Name Like "*_*Click") Then
             'lets move these to the Events nodes instead because there are allot
             'of them and the node is usually empty I know this isnt a complete list..but its the heaviest used..
              e.mType = vbext_mt_Event
@@ -477,31 +483,31 @@ Sub Reload(Optional NewModule As CodeModule)
         
         Select Case e.mType
             Case vbext_mt_Method, vbext_mt_Event
-                e.loc = ActiveCodeModule.ProcBodyLine(mber.name, vbext_pk_Proc)
-                e.lcnt = ActiveCodeModule.ProcCountLines(mber.name, vbext_pk_Proc)
+                e.loc = ActiveCodeModule.ProcBodyLine(mber.Name, vbext_pk_Proc)
+                e.lcnt = ActiveCodeModule.ProcCountLines(mber.Name, vbext_pk_Proc)
                 If Err.Number <> 0 Then 'sub has no body error possible...
                     e.loc = 0
                     Err.Clear
                 End If
             Case vbext_mt_Property
-                e.loc = ActiveCodeModule.ProcBodyLine(mber.name, vbext_pk_Get)
-                e.lcnt = ActiveCodeModule.ProcCountLines(mber.name, vbext_pk_Get)
+                e.loc = ActiveCodeModule.ProcBodyLine(mber.Name, vbext_pk_Get)
+                e.lcnt = ActiveCodeModule.ProcCountLines(mber.Name, vbext_pk_Get)
                 If e.loc = 0 Then
-                    e.loc = ActiveCodeModule.ProcBodyLine(mber.name, vbext_pk_Let)
-                    e.lcnt = ActiveCodeModule.ProcCountLines(mber.name, vbext_pk_Let)
+                    e.loc = ActiveCodeModule.ProcBodyLine(mber.Name, vbext_pk_Let)
+                    e.lcnt = ActiveCodeModule.ProcCountLines(mber.Name, vbext_pk_Let)
                 End If
                 If e.loc = 0 Then
-                    e.loc = ActiveCodeModule.ProcBodyLine(mber.name, vbext_pk_Set)
-                    e.lcnt = ActiveCodeModule.ProcCountLines(mber.name, vbext_pk_Set)
+                    e.loc = ActiveCodeModule.ProcBodyLine(mber.Name, vbext_pk_Set)
+                    e.lcnt = ActiveCodeModule.ProcCountLines(mber.Name, vbext_pk_Set)
                 End If
             Case vbext_mt_Variable
-                e.loc = getVarDefLine(mber.name, e.loc)
+                e.loc = getVarDefLine(mber.Name, e.loc)
         End Select
         
         Const minLen = 20
-        NodeName = mber.name
-        e.lineCount = GetLineCountForNode(mber.name)
-        e.name = mber.name
+        NodeName = mber.Name
+        e.lineCount = GetLineCountForNode(mber.Name)
+        e.Name = mber.Name
         
         If mnuShowLineCount.Checked And mber.Type <> vbext_mt_Variable Then
             If Len(NodeName) < minLen Then NodeName = Left(NodeName & String(minLen, " "), minLen)
@@ -509,15 +515,17 @@ Sub Reload(Optional NewModule As CodeModule)
         End If
         
         If e.loc = 0 Then
-            e.proto = mber.name
+            e.proto = mber.Name
         Else
             e.proto = ActiveCodeModule.Lines(e.loc, 1)
-            If Len(e.proto) = 0 Then e.proto = mber.name   'addin api weirdness all I can presume..fuck it
+            If Len(e.proto) = 0 Then e.proto = mber.Name   'addin api weirdness all I can presume..fuck it
         End If
         
         'If Len(protoType) = 0 Then Stop
         
-        If e.loc > 1 Then  'I dont want to see API declares to cluttered
+        'If e.loc > 1 Then  'I dont want to see API declares to cluttered
+        
+        If e.loc <= 1 Then e.mType = vbext_mt_API
         
             If Len(txtFilter) > 0 Then
                 If VBA.Left(txtFilter, 1) = "*" Then 'public members only
@@ -531,7 +539,7 @@ Sub Reload(Optional NewModule As CodeModule)
                     If InStr(txtFilter, ",") Then tmp = Split(Mid(txtFilter, 2), ",") Else tmp = Split(Mid(txtFilter, 2), " ")
                     For Each x In tmp
                         If Len(x) > 0 Then
-                            If InStr(1, mber.name, x, vbTextCompare) > 0 Then
+                            If InStr(1, mber.Name, x, vbTextCompare) > 0 Then
                                 addit = False
                                 Exit For
                             End If
@@ -543,7 +551,7 @@ Sub Reload(Optional NewModule As CodeModule)
                     Else
                         'Stop
                     End If
-                ElseIf InStr(1, mber.name, txtFilter, vbTextCompare) > 0 Then
+                ElseIf InStr(1, mber.Name, txtFilter, vbTextCompare) > 0 Then
                     Set nn = CodeView.Nodes.Add(Nodes(e.mType), tvwChild, , NodeName, e.mType + i)
                     Set nn.Tag = e
                 End If
@@ -554,11 +562,12 @@ Sub Reload(Optional NewModule As CodeModule)
                 'If mType = vbext_mt_Event Then Debug.Print "proto: " & nn.Tag & " key:" & key & " err:" & Err.Description 'some garbage is appearing here...
             End If
             
-        End If
+            'nn.Text = e.loc & " " & nn.Text
+        'End If
         
     Next
     
-    NodeName = ActiveCodeModule.parent.name
+    NodeName = ActiveCodeModule.parent.Name
     If mnuShowLineCount.Checked Then NodeName = NodeName & " " & ActiveCodeModule.CountOfLines
     
     CodeView.Nodes("cv").Text = NodeName
@@ -591,7 +600,7 @@ Private Function GetTotalLOC()
      Set proj = g_VBInstance.ActiveVBProject
      'For Each proj In g_VBInstance.VBProjects
        For Each comp In proj.VBComponents
-            If Len(comp.name) > 0 Then  'i think related files cause crash on accessing comp.codemodule .name will be blank so we skip..
+            If Len(comp.Name) > 0 Then  'i think related files cause crash on accessing comp.codemodule .name will be blank so we skip..
                 tot = tot + comp.CodeModule.CountOfLines
             End If
        Next
@@ -603,7 +612,7 @@ End Function
 
  
  
-Private Sub lblFilter_MouseUp(Button As Integer, Shift As Integer, x As Single, Y As Single)
+Private Sub lblFilter_MouseUp(Button As Integer, Shift As Integer, x As Single, y As Single)
    ' If Button = 1 Then
         txtFilter.Text = ""
    ' Else
@@ -634,7 +643,7 @@ Private Sub mnuCopyPublic_Click()
                         Set e = n.Tag
                         If e.scope = 0 Then
                             push x(), e.proto
-                            push names(), e.name
+                            push names(), e.Name
                         End If
                         Debug.Print e.proto
                 End If
@@ -654,7 +663,7 @@ Private Sub mnuCopyPublic_Click()
                         If Left(Text, 7) = "Public " Then Text = Replace(Text, "Public ", "", , 1)
                         If InStr(1, Text, "Private") < 1 Then
                             push x(), Text
-                            push names(), e.name
+                            push names(), e.Name
                         End If
                         Debug.Print Text
                 End If
@@ -674,7 +683,7 @@ Private Sub mnuCopyPublic_Click()
                         Text = Replace(Text, "Property Get", "Property")
                         If Left(Text, 7) = "Public " Then Text = Replace(Text, "Public ", "", , 1)
                         push x(), Text
-                        push names(), e.name
+                        push names(), e.Name
                 End If
             End If
         Next
@@ -692,7 +701,7 @@ Private Sub mnuCopyPublic_Click()
                         If Left(Text, 7) = "Public " Then Text = Replace(Text, "Public ", "", , 1)
                         If n.Image = 1 Then
                             push x(), Text
-                            push names(), e.name
+                            push names(), e.Name
                         End If
                 End If
             End If
@@ -702,9 +711,9 @@ Private Sub mnuCopyPublic_Click()
     Dim pth As String, initDir As String, dat As String
     
     initDir = GetParentFolder(g_VBInstance.ActiveVBProject.filename)
-    dat = "'" & ActiveCodeModule.parent.name & vbCrLf & vbCrLf & Join(x, vbCrLf) & vbCrLf & Join(names, " ")
+    dat = "'" & ActiveCodeModule.parent.Name & vbCrLf & vbCrLf & Join(x, vbCrLf) & vbCrLf & Join(names, " ")
     
-    pth = SaveDialog(ActiveCodeModule.parent.name & ".txt", initDir, "Save As (Cancel to Copy)")
+    pth = SaveDialog(ActiveCodeModule.parent.Name & ".txt", initDir, "Save As (Cancel to Copy)")
     If Len(pth) = 0 Then
         Clipboard.Clear
         Clipboard.SetText dat
